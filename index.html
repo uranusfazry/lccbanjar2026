@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>CBT TKA 2026 by Uranusfazry</title>
+  <title>CBT PAI 2026 by Uranusfazry</title>
 
   <!-- Favicon -->
   <link rel="icon" href="https://i.imghippo.com/files/SEt8062KiQ.webp" type="image/webp">
@@ -899,6 +899,22 @@ body {
   color: var(--gray-700);
 }
 
+.footer-copyright {
+  margin-top: 30px;
+  text-align: center;
+  font-size: 12px;
+  color: #6b7280;
+  opacity: 0.8;
+  line-height: 1.6;
+}
+.footer-copyright strong {
+  color: #374151;
+}
+.footer-copyright em {
+  font-style: italic;
+  color: #9ca3af;
+}
+
 /* ============================
    🔥 MODAL MODERN & REUSABLE
    ============================ */
@@ -1114,7 +1130,8 @@ body > div:first-child:not(#screen-login):not(#screen-admin-login):not(#screen-a
 
     <div class="form-group">
       <label>Password Ujian</label>
-      <input id="inp-password" class="form-input" type="password" placeholder="Masukkan password">
+      <input id="inp-password" class="form-input" type="password" placeholder="Masukkan password ujian">
+      <div class="form-hint">Gunakan password yang diberikan oleh panitia</div>
     </div>
 
     <button id="btn-login" class="btn-primary ripple-target">
@@ -1156,7 +1173,7 @@ body > div:first-child:not(#screen-login):not(#screen-admin-login):not(#screen-a
     <div class="login-sub">Panel Pengelolaan CBT</div>
 
     <div class="form-group">
-      <label>Username Admin / Guru</label>
+      <label>Username Admin / Pengawas</label>
       <input class="form-input" id="admin-username" type="text" placeholder="Username" autocomplete="off" />
     </div>
     <div class="form-group">
@@ -1169,7 +1186,7 @@ body > div:first-child:not(#screen-login):not(#screen-admin-login):not(#screen-a
 
     <div style="text-align: center; margin-top: 24px; padding-top: 16px; border-top: 1px dashed var(--gray-200);">
       <button onclick="showScreen('screen-login')" style="background:none; border:none; color:var(--gray-500); font-weight:600; font-size:13px; cursor:pointer; text-decoration:none;">
-        &larr; Kembali ke Login Siswa
+        &larr; Kembali ke Login Peserta
       </button>
     </div>
   </div>
@@ -1287,7 +1304,7 @@ body > div:first-child:not(#screen-login):not(#screen-admin-login):not(#screen-a
           <img src="https://i.imghippo.com/files/SEt8062KiQ.webp" alt="Logo" />
         </div>
         <div class="topbar-title">
-          Dashboard Guru
+          Dashboard Admin
           <span>Kota Banjar</span>
         </div>
       </div>
@@ -1389,6 +1406,12 @@ body > div:first-child:not(#screen-login):not(#screen-admin-login):not(#screen-a
       <strong>Kelompok Kerja Guru (KKG) Pendidikan Agama Islam (PAI)</strong><br>
       Sekolah Dasar Kota Banjar<br>
       Tahun 2026
+    </div>
+
+    <div class="footer-copyright">
+      <strong>Hak Cipta &copy; 2026</strong><br>
+      Dikembangkan oleh Fazry Irawan<br>
+      <em>(Cucu dari Bidan Maryamah)</em>
     </div>
   </div>
 </div>
