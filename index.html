@@ -543,13 +543,15 @@
     color: #fff;
     box-shadow: 0 3px 10px rgba(37,99,235,.3);
   }
-  .btn-next:hover { background: linear-gradient(135deg,var(--blue-700),var(--blue-600)); transform: translateX(2px); box-shadow: 0 5px 15px rgba(37,99,235,.38); }
+  .btn-next:hover:not(:disabled) { background: linear-gradient(135deg,var(--blue-700),var(--blue-600)); transform: translateX(2px); box-shadow: 0 5px 15px rgba(37,99,235,.38); }
+  .btn-next:disabled { opacity: .5; cursor: not-allowed; }
   .btn-submit {
     background: linear-gradient(135deg,var(--green-500),#16a34a);
     color: #fff;
     box-shadow: 0 3px 10px rgba(34,197,94,.3);
   }
-  .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(34,197,94,.38); }
+  .btn-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(34,197,94,.38); }
+  .btn-submit:disabled { opacity: .7; cursor: not-allowed; }
   .btn-nav svg { width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2; transition: transform .2s ease; }
 
   /* SIDEBAR – QUESTION NAVIGATOR */
@@ -672,8 +674,9 @@
     position: relative;
     overflow: hidden;
   }
+  .btn-finish:disabled { opacity: 0.7; cursor: not-allowed; }
   .btn-finish svg { width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2.5; }
-  .btn-finish:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(34,197,94,.38); }
+  .btn-finish:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(34,197,94,.38); }
 
   /* ============================
      ── FITUR BARU: HALAMAN SUKSES / TERIMA KASIH (ANTI-RETAKE) ──
@@ -1224,7 +1227,7 @@
       Anda tidak dapat mengerjakan ulang ujian ini.
     </div>
     <!-- Tombol reload untuk kembali ke halaman awal tanpa bisa melihat skor -->
-    <button class="btn-primary ripple-target" onclick="window.location.reload()" style="max-width: 250px; margin: 0 auto;">Selesai</button>
+    <button class="btn-primary ripple-target" onclick="window.location.reload()" style="max-width: 250px; margin: 0 auto;">Kembali ke Beranda</button>
   </div>
 </div>
 
@@ -1447,17 +1450,16 @@
 // ==============================
 // 🔧 CONFIG & ADMIN CREDENTIALS
 // ==============================
-// GANTI STRING DI BAWAH INI DENGAN URL GOOGLE APPS SCRIPT ANDA
-const BACKEND_API_URL = "https://script.google.com/macros/s/AKfycbzxxxx/exec"; 
+// URL API GOOGLE SCRIPT YANG DIPERBAIKI:
+const BACKEND_API_URL = "https://script.google.com/macros/s/AKfycbyKph_sAa3gN3_iB80Xhnd8KImF1ZfnrKl6ePEdcTsDUoj3GEHhulQ-mA7KTgUsC4U/exec"; 
 
 // FIXED ADMIN ACCOUNTS
 const ADMIN_USERNAME = "IRWAN";
 const ADMIN_PASSWORD = "uranusfazry123";
 
-// ==============================
-// 🌐 ROLE SYSTEM (URL PARAM)
-// ==============================
+// STATE GLOBAL
 let isAdminLoggedIn = false;
+let isSubmitting = false; // FLAG MENCEGAH DOUBLE SUBMIT DI FRONTEND
 
 /* ============================================================
    FUNGSI IDENTITAS SEKOLAH & APLIKASI
@@ -1470,7 +1472,10 @@ function applySchoolIdentity() {
   });
 }
 
-function sendResultToBackend(finalScore, correctCount) {
+// ============================================================
+// 🔥 FUNGSI UTAMA: SEND HASIL KE GOOGLE SPREADSHEET (APPS SCRIPT)
+// ============================================================
+async function sendResultToBackend(finalScore, correctCount) {
   let totalTime = (60 * 60) - state.timer;
   
   // 🔧 FRONTEND — PAYLOAD KE BACKEND
@@ -1485,31 +1490,43 @@ function sendResultToBackend(finalScore, correctCount) {
     status: "done"
   };
 
-  let retries = 3;
-  const attemptSend = async () => {
-    try {
-      const res = await fetch(BACKEND_API_URL, {
-        method: "POST",
-        body: JSON.stringify(data)
-      });
-      const json = await res.json();
-      if (json.status === 'success') {
-        console.log("Data sinkronisasi: BERHASIL DISIMPAN");
-      } else {
-        throw new Error(json.message || "Unknown error dari server");
-      }
-    } catch (err) {
-      console.error("Error mengirim hasil:", err);
-      retries--;
-      if (retries > 0) {
-        setTimeout(attemptSend, 2000);
-      }
+  try {
+    // 🔗 WAJIB FETCH SESUAI INSTRUKSI DENGAN HEADERS application/json
+    const res = await fetch(BACKEND_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(data)
+    });
+    
+    const json = await res.json();
+    
+    if (json.status === 'success') {
+      showThankYouScreen(); // Lanjut Pindah ke Halaman Terima Kasih setelah Berhasil Disimpan
+    } else {
+      throw new Error(json.message || "Unknown error dari server");
     }
-  };
-
-  attemptSend();
+  } catch (err) {
+    console.error("Error mengirim hasil:", err);
+    
+    // ERROR HANDLING (MEMBUKA KEMBALI TOMBOL JIKA GAGAL)
+    showToast('error', 'Gagal', 'Gagal mengirim data. Pastikan koneksi stabil.');
+    isSubmitting = false;
+    state.submitted = false; 
+    
+    const btnSubmit = $('btn-submit-footer');
+    const btnFinish = $('btn-finish');
+    
+    btnSubmit.disabled = false;
+    btnFinish.disabled = false;
+    $('btn-prev').disabled = false;
+    $('btn-next').disabled = false;
+    
+    btnSubmit.innerHTML = `<svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 012-2h11"/></svg> Selesai`;
+    btnFinish.innerHTML = `<svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 012-2h11"/></svg> Selesai & Kumpulkan`;
+  }
 }
-
 
 /* ============================================================
    🔥 SYSTEM TOAST MODERN
@@ -1781,7 +1798,7 @@ function logoutAdmin() {
 
 
 /* ============================================================
-   === FITUR 1, 2, 3: LOGIKA LOGIN SISWA PRO (ANTI RETAKE) ===
+   === LOGIKA LOGIN SISWA PRO (ANTI RETAKE VALIDATION) ===
    ============================================================ */
 $('btn-login').addEventListener('click', async () => {
   const btn = $('btn-login');
@@ -1820,19 +1837,20 @@ $('btn-login').addEventListener('click', async () => {
     return;
   }
   
-  // 🔥 CEK STATUS SEBELUM MASUK DARI BACKEND
+  // 🔥 CEK STATUS SEBELUM MASUK DARI BACKEND SPREADSHEET
   try {
     const resCheck = await fetch(BACKEND_API_URL + "?check=" + nomor);
     const jsonCheck = await resCheck.json();
     
-    // Jika backend bilang sudah mengerjakan, tolak masuk (Block Entry)
+    // Jika backend bilang sudah mengerjakan, tolak masuk dan panggil layar Terima Kasih
     if (jsonCheck.status === 'success' && jsonCheck.data && jsonCheck.data.status === 'done') {
       btn.innerHTML = oriText; btn.disabled = false;
-      showToast('warning', 'Akses Ditolak', 'Terima kasih, Anda sudah mengerjakan ujian ini.');
-      return; // Berhenti di sini
+      showToast('warning', 'Akses Ditolak', 'Anda sudah menyelesaikan dan mengirim ujian ini.');
+      showScreen('screen-thank-you'); 
+      return; // Stop function execution
     }
   } catch (e) {
-    console.warn("Gagal cek status, mengabaikan blokir untuk antisipasi saat offline.");
+    console.warn("Gagal cek status dari database. Mengabaikan blokir untuk antisipasi offline network.");
   }
 
   const namaGen = "Peserta " + nomor;
@@ -2172,10 +2190,11 @@ function openSubmitModal() {
 
 
 /* ============================================================
-   SUBMIT & RESULT (FITUR 5 & 6)
+   SUBMIT & RESULT (FITUR UTAMA PENGIRIMAN DATA)
    ============================================================ */
 function doSubmit() {
-  if (state.submitted) return;
+  // Cegah eksekusi berulang kali dari tombol manapun jika sedang diproses
+  if (state.submitted || isSubmitting) return; 
   
   if (!state.nama && !localStorage.getItem("cbt_nama")) {
     showToast('error', 'Sesi Tidak Valid', 'Anda terdeteksi belum login.');
@@ -2183,28 +2202,28 @@ function doSubmit() {
     return;
   }
 
-  // Mencegah double click dan mengunci (Lock System)
-  $('btn-submit-footer').disabled = true;
-  $('btn-finish').disabled = true;
+  const btnSubmit = $('btn-submit-footer');
+  const btnFinish = $('btn-finish');
+  
+  // 🔒 KUNCI TOMBOL & TAMPILKAN STATUS LOADING
+  isSubmitting = true;
+  state.submitted = true;
+  
+  btnSubmit.disabled = true;
+  btnFinish.disabled = true;
   $('btn-prev').disabled = true;
   $('btn-next').disabled = true;
   
-  state.submitted = true;
+  btnSubmit.innerHTML = `<svg style="animation:spin 1s linear infinite;width:18px;height:18px;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Mengirim jawaban...`;
+  btnFinish.innerHTML = `<svg style="animation:spin 1s linear infinite;width:18px;height:18px;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Mengirim jawaban...`;
+
   saveCurrentEssay();
   clearSession(state.nama); 
   clearInterval(state.timerInterval);
   
   if (document.exitFullscreen) { document.exitFullscreen().catch(()=>{}); }
 
-  // Langsung kalkulasi nilai secara tertutup dan navigasi ke Halaman Terima Kasih
-  showThankYouScreen();
-}
-
-function showThankYouScreen() {
-  showScreen('screen-thank-you');
-  showToast('success', 'Ujian Selesai', 'Terima kasih, jawabanmu sudah dikumpulkan.');
-
-  // Kalkulasi Skor di Latar Belakang (JANGAN ditunjukkan ke siswa)
+  // Kalkulasi Skor Tersembunyi (JANGAN ditunjukkan ke siswa)
   const pgSoal = SOAL.filter(s => s.type === 'pg');
   let correct = 0;
 
@@ -2214,10 +2233,14 @@ function showThankYouScreen() {
 
   const finalWeightedScore = pgSoal.length > 0 ? Math.round((correct / pgSoal.length) * 100) : 0;
 
-  // 🔥 TRIGGER BACKEND SYNC (Kirim nama, nomor, benar, skor, waktu, tgl, status)
+  // 🔥 TRIGGER BACKEND SYNC (Kirim Data secara Live)
   sendResultToBackend(finalWeightedScore, correct);
 }
 
+function showThankYouScreen() {
+  showScreen('screen-thank-you');
+  showToast('success', 'Ujian Selesai', 'Terima kasih, jawabanmu sudah berhasil dikumpulkan.');
+}
 
 /* ============================================================
    🔥 CUSTOM RELOAD WARNING & NAVIGATION TRAP 
